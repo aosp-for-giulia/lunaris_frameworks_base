@@ -135,7 +135,8 @@ public class SystemSettings {
                 Settings.System.SHADE_SCRIM_ALPHA,
                 Settings.System.NOTIFICATION_SCRIM_ALPHA,
                 Settings.System.FLING_VELOCITY_MIN,
-                Settings.System.FLING_VELOCITY_MAX
+                Settings.System.FLING_VELOCITY_MAX,
+                Settings.System.STATUS_BAR_DYNAMIC_ISLAND_VERTICAL_OFFSET
         ));
         if (Flags.backUpSmoothDisplayAndForcePeakRefreshRate()) {
             settings.add(Settings.System.PEAK_REFRESH_RATE);

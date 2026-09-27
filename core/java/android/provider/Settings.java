@@ -8096,6 +8096,14 @@ public final class Settings {
         public static final String STATUS_BAR_DYNAMIC_ISLAND_HEIGHT_SCALE = "status_bar_dynamic_island_height_scale";
 
         /**
+         * User vertical offset of the dynamic island pill, in density-independent pixels
+         * ({@code -15} to {@code 15}). {@code 0} leaves the pill unmoved; negative values move
+         * the pill up.
+         * @hide
+         */
+        public static final String STATUS_BAR_DYNAMIC_ISLAND_VERTICAL_OFFSET = "status_bar_dynamic_island_vertical_offset";
+
+        /**
          * @hide
          */
         public static final String STATUS_BAR_DYNAMIC_ISLAND_SCREEN_RECORDING = "status_bar_dynamic_island_screen_recording";

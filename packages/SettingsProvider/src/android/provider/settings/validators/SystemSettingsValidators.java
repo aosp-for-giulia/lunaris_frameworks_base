@@ -292,5 +292,7 @@ public class SystemSettingsValidators {
                 System.CV_PREFERRED_INTENSITY,
                 new InclusiveFloatRangeValidator(
                         CV_PREFERRED_INTENSITY_MIN, CV_PREFERRED_INTENSITY_MAX));
+        VALIDATORS.put(System.STATUS_BAR_DYNAMIC_ISLAND_VERTICAL_OFFSET,
+                new InclusiveIntegerRangeValidator(-15, 15));
     }
 }

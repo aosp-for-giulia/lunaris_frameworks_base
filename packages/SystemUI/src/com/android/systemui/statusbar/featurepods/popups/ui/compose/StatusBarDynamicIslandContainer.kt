@@ -115,7 +115,7 @@ fun StatusBarDynamicIslandContainer(
         modifier =
             modifier
                 .padding(horizontal = 8.dp)
-                .offset(x = cutoutSpec.horizontalOffset)
+                .offset(x = cutoutSpec.horizontalOffset, y = cutoutSpec.verticalOffset)
                 .onGloballyPositioned { coordinates ->
                     val b = coordinates.boundsInWindow()
                     onIslandBoundsChanged(
