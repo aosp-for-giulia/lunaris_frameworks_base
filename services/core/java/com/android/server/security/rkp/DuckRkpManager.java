@@ -157,12 +157,27 @@ public final class DuckRkpManager {
         }
     }
 
+    private boolean halAvailable() {
+        if (!ServiceManager.isDeclared(DuckRkpV1.SERVICE)) return false;
+        try {
+            android.hardware.security.keymint.IRemotelyProvisionedComponent component =
+                    android.hardware.security.keymint.IRemotelyProvisionedComponent.Stub.asInterface(
+                            ServiceManager.checkService(DuckRkpV1.SERVICE));
+            if (component == null) return false;
+            android.hardware.security.keymint.RpcHardwareInfo info = component.getHardwareInfo();
+            return info.versionNumber >= 3 || info.supportedEekCurve
+                    != android.hardware.security.keymint.RpcHardwareInfo.CURVE_NONE;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public synchronized Bundle getState() {
         Bundle state = new Bundle();
         boolean imported = hasImportedKeybox();
         boolean enabled = isEnabled();
         state.putBoolean("available", mLoaded && isQualcomm()
-                && (ServiceManager.isDeclared(DuckRkpV1.SERVICE) || DuckRkpNative.available()));
+                && (halAvailable() || DuckRkpNative.available()));
         state.putBoolean("enabled", enabled);
         state.putBoolean("busy", mBusy);
         state.putBoolean("imported", imported);

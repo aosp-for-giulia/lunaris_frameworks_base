@@ -42,6 +42,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import javax.net.ssl.HttpsURLConnection;
 
+import co.nstant.in.cbor.model.Array;
 import co.nstant.in.cbor.model.DataItem;
 import co.nstant.in.cbor.model.Map;
 import co.nstant.in.cbor.model.SimpleValue;
@@ -78,14 +79,17 @@ final class DuckRkpV1 {
                 ServiceManager.checkService(SERVICE));
         boolean nativeAvailable = DuckRkpNative.available();
         int curve = RpcHardwareInfo.CURVE_NONE;
+        boolean v3 = false;
         if (component != null) {
             try {
-                curve = component.getHardwareInfo().supportedEekCurve;
+                RpcHardwareInfo info = component.getHardwareInfo();
+                curve = info.supportedEekCurve;
+                v3 = info.versionNumber >= 3;
             } catch (android.os.RemoteException | ServiceSpecificException e) {
                 if (!nativeAvailable) throw new Failure("hal_unavailable");
             }
         }
-        boolean aidl = curve == RpcHardwareInfo.CURVE_P256
+        boolean aidl = v3 || curve == RpcHardwareInfo.CURVE_P256
                 || curve == RpcHardwareInfo.CURVE_25519;
         Failure last = new Failure(component == null ? "hal_unavailable" : "hal_unsupported");
         // Native CSR protocols are independent of the AIDL HAL version and EEK support.
@@ -94,7 +98,8 @@ final class DuckRkpV1 {
         for (int[] method : methods) {
             if (method[0] == 0 ? !aidl : !nativeAvailable) continue;
             try {
-                return provision(progress, component, method[0], method[1]);
+                return provision(progress, component, method[0], method[1],
+                        method[0] == 0 && v3);
             } catch (Failure e) {
                 android.util.Slog.w("DuckRkp", "Backend " + method[0] + " curve " + method[1]
                         + " failed: " + e.code + " (" + e.detail + ")");
@@ -112,7 +117,8 @@ final class DuckRkpV1 {
     }
 
     private static DuckRkpCertificates.Result provision(Progress progress,
-            IRemotelyProvisionedComponent component, int backend, int curve) throws Exception {
+            IRemotelyProvisionedComponent component, int backend, int curve, boolean v3)
+            throws Exception {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
         generator.initialize(new ECGenParameterSpec("secp256r1"));
         KeyPair key = generator.generateKeyPair();
@@ -144,10 +150,24 @@ final class DuckRkpV1 {
                     eek = encode(pair.get(1));
                 }
             }
-            if (eek == null || eek.length > HAL_LIMIT) throw new Failure("missing_eek");
+            if (!v3 && (eek == null || eek.length > HAL_LIMIT)) throw new Failure("missing_eek");
             progress.update("hardware");
             if (backend == 1) {
                 csr = DuckRkpNative.signV1(publicKey, challenge, eek, Build.FINGERPRINT);
+            } else if (v3) {
+                MacedPublicKey macedKey = new MacedPublicKey();
+                macedKey.macedKey = macedPublicKey(publicKey);
+                try {
+                    Array csrArray = (Array) decode(
+                            component.generateCertificateRequestV2(new MacedPublicKey[] {macedKey},
+                                    challenge));
+                    csrArray.add(new Map().put(text("fingerprint"), text(Build.FINGERPRINT)));
+                    csr = encode(csrArray);
+                } catch (ServiceSpecificException e) {
+                    throw new Failure("hal_rejected", e.errorCode);
+                } catch (android.os.RemoteException e) {
+                    throw new Failure("hal_unavailable");
+                }
             } else {
                 DeviceInfo deviceInfo = new DeviceInfo();
                 ProtectedData protectedData = new ProtectedData();
